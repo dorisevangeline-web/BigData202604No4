@@ -4,3 +4,4 @@ packaging==26.2
 beautifulsoup4
 requests
 selenium
+webdriver-manager
