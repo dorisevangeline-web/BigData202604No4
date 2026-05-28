@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>三大超商飲料優惠掃描</title>
+    <style>
+        /* 基本重置與頁面設定 */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+        }
+
+        /* 載入中提示的樣式 */
+        #loading {
+            text-align: center;
+            font-size: 1.2rem;
+            color: #555;
+            margin-top: 50px;
+        }
+
+        /* 卡片網格排版 (響應式設計) */
+        .grid-container {
+            display: grid;
+            /* 螢幕寬度足夠時並排顯示，太窄則單行顯示 */
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding-top: 20px;
+        }
+
+        /* 單一卡片樣式 */
+        .card {
+            background-color: #fff;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            text-decoration: none; /* 移除超連結底線 */
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+        }
+
+        .card img {
+            width: 100%;
+            height: 250px;
+            object-fit: cover; /* 確保圖片填滿且不變形 */
+        }
+
+        .card-content {
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-top: 10px;
+            line-height: 1.4;
+        }
+
+        /* --- 核心重點：超商標籤樣式 --- */
+        .store-tag {
+            align-self: flex-start; /* 讓標籤靠左對齊，不拉伸 */
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: white;
+            letter-spacing: 1px;
+        }
+
+        /* 根據不同超商設定專屬顏色 */
+        .tag-family { background-color: #00A859; } /* 全家綠 */
+        .tag-seven { background-color: #F37021; }  /* 7-11橘 */
+        .tag-hilife { background-color: #E60044; } /* 萊爾富桃紅 */
+        .tag-default { background-color: #7f8c8d; } /* 預設灰 (防錯) */
+        
+    </style>
+</head>
+<body>
+
+    <h1>🥤 三大超商飲料優惠掃描器</h1>
+    
+    <div id="loading">
+        🚀 機器人正在各超商網頁奔波中，請稍候... (爬取 3 間超商可能需要 15~30 秒)
+    </div>
+
+    <div id="events-container" class="grid-container"></div>
+
+    <script>
+        // 將不同超商名稱映射到對應的 CSS class
+        function getStoreClass(storeName) {
+            if (storeName === '全家') return 'tag-family';
+            if (storeName === '7-11') return 'tag-seven';
+            if (storeName === '萊爾富') return 'tag-hilife';
+            return 'tag-default'; // 萬一有預期外的名稱
+        }
+
+        // 網頁載入後，自動向後端 API 請求資料
+        window.onload = function() {
+            fetch('/api/update')
+                .then(response => response.json())
+                .then(data => {
+                    const container = document.getElementById('events-container');
+                    const loading = document.getElementById('loading');
+                    
+                    // 隱藏載入中提示
+                    loading.style.display = 'none';
+
+                    // 檢查是否有抓到資料
+                    if (data.length === 0) {
+                        container.innerHTML = '<p style="text-align:center; width:100%;">目前沒有掃描到任何優惠 QQ</p>';
+                        return;
+                    }
+
+                    // 尋訪每一筆資料，建立卡片
+                    data.forEach(event => {
+                        // 取得對應的超商顏色 class
+                        const tagClass = getStoreClass(event.store);
+
+                        // 使用 Template Literal 組合 HTML
+                        const cardHTML = `
+                            <a href="${event.link}" target="_blank" class="card">
+                                <img src="${event.img_url}" alt="優惠圖片" onerror="this.src='https://via.placeholder.com/300x250?text=No+Image'">
+                                <div class="card-content">
+                                    <span class="store-tag ${tagClass}">${event.store}</span>
+                                    <div class="card-title">${event.title}</div>
+                                </div>
+                            </a>
+                        `;
+                        
+                        // 將組合好的卡片塞進容器中
+                        container.insertAdjacentHTML('beforeend', cardHTML);
+                    });
+                })
+                .catch(error => {
+                    console.error('API 請求失敗:', error);
+                    document.getElementById('loading').innerText = '❌ 抓取資料時發生錯誤，請檢查終端機。';
+                });
+        };
+    </script>
+</body>
+</html>
