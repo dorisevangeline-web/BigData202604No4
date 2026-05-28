@@ -10,6 +10,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 import time
 from urllib.parse import urljoin
 import re
+import os
 
 app = Flask(__name__)
 
@@ -178,4 +179,8 @@ def update_events():
     return jsonify(data)
 
 if __name__ == '__main__':
-    app.run(debug=True, port=8080)
+    # 讓 Render 動態決定 Port，如果讀不到（例如你在本機測試），就預設用 8080
+    port = int(os.environ.get('PORT', 8080))
+    
+    # host='0.0.0.0' 是對外公開的關鍵；debug=True 也可以繼續保留
+    app.run(host='0.0.0.0', port=port, debug=True)
