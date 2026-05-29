@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>三大超商飲料優惠掃描</title>
     <style>
-        /* 基本重置與頁面設定 */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #f4f7f6;
@@ -18,56 +17,88 @@
             color: #2c3e50;
         }
 
-        /* 載入中提示的樣式 */
-        #loading {
+        /* --- 控制面板與按鈕樣式 --- */
+        .control-panel {
+            max-width: 1200px;
+            margin: 20px auto;
             text-align: center;
-            font-size: 1.2rem;
-            color: #555;
-            margin-top: 50px;
+        }
+        .tab-btn {
+            padding: 10px 20px;
+            margin: 0 5px;
+            border: none;
+            border-radius: 20px;
+            background-color: #ddd;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        .tab-btn.active {
+            background-color: #2c3e50;
+            color: white;
+        }
+        .update-btn {
+            padding: 8px 15px;
+            margin-left: 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: #3498db;
+            color: white;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.2s;
+        }
+        .update-btn:hover { background-color: #2980b9; }
+        .update-btn:disabled { background-color: #95a5a6; cursor: not-allowed; }
+
+        /* --- 狀態提示 --- */
+        #status-msg {
+            text-align: center;
+            font-size: 1.1rem;
+            color: #d35400;
+            margin: 15px 0;
+            font-weight: bold;
+            min-height: 24px;
         }
 
-        /* 卡片網格排版 (響應式設計) */
+        /* --- 卡片網格排版 --- */
         .grid-container {
             display: grid;
-            /* 螢幕寬度足夠時並排顯示，太窄則單行顯示 */
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 20px;
             max-width: 1200px;
             margin: 0 auto;
-            padding-top: 20px;
+            padding-top: 10px;
         }
 
-        /* 單一卡片樣式 */
+        /* --- 單一卡片樣式 --- */
         .card {
             background-color: #fff;
             border-radius: 10px;
             overflow: hidden;
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            text-decoration: none; /* 移除超連結底線 */
+            text-decoration: none;
             color: inherit;
             display: flex;
             flex-direction: column;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
-        
         .card:hover {
             transform: translateY(-5px);
             box-shadow: 0 8px 16px rgba(0,0,0,0.15);
         }
-
         .card img {
             width: 100%;
             height: 250px;
-            object-fit: cover; /* 確保圖片填滿且不變形 */
+            object-fit: cover;
         }
-
         .card-content {
             padding: 15px;
             display: flex;
             flex-direction: column;
             flex-grow: 1;
         }
-
         .card-title {
             font-size: 1.1rem;
             font-weight: bold;
@@ -75,9 +106,9 @@
             line-height: 1.4;
         }
 
-        /* --- 核心重點：超商標籤樣式 --- */
+        /* --- 超商標籤樣式 --- */
         .store-tag {
-            align-self: flex-start; /* 讓標籤靠左對齊，不拉伸 */
+            align-self: flex-start;
             padding: 5px 10px;
             border-radius: 20px;
             font-size: 0.85rem;
@@ -85,75 +116,142 @@
             color: white;
             letter-spacing: 1px;
         }
-
-        /* 根據不同超商設定專屬顏色 */
-        .tag-family { background-color: #00A859; } /* 全家綠 */
-        .tag-seven { background-color: #F37021; }  /* 7-11橘 */
-        .tag-hilife { background-color: #E60044; } /* 萊爾富桃紅 */
-        .tag-default { background-color: #7f8c8d; } /* 預設灰 (防錯) */
-        
+        .tag-family { background-color: #00A859; }
+        .tag-seven { background-color: #F37021; }
+        .tag-hilife { background-color: #E60044; }
+        .tag-default { background-color: #7f8c8d; }
     </style>
 </head>
 <body>
 
     <h1>🥤 三大超商飲料優惠掃描器</h1>
     
-    <div id="loading">
-        🚀 機器人正在各超商網頁奔波中，請稍候... (爬取 3 間超商可能需要 15~30 秒)
+    <div class="control-panel">
+        <button class="tab-btn active" onclick="switchTab('全部')">顯示全部</button>
+        <button class="tab-btn" onclick="switchTab('7-11')">7-11</button>
+        <button class="tab-btn" onclick="switchTab('全家')">全家</button>
+        <button class="tab-btn" onclick="switchTab('萊爾富')">萊爾富</button>
+        <br><br>
+        <button id="update-all" class="update-btn" onclick="fetchData('全部')">🔄 手動更新全部</button>
+        <button id="update-7-11" class="update-btn" style="display:none;" onclick="fetchData('7-11')">🔄 手動更新 7-11</button>
+        <button id="update-全家" class="update-btn" style="display:none;" onclick="fetchData('全家')">🔄 手動更新全家</button>
+        <button id="update-萊爾富" class="update-btn" style="display:none;" onclick="fetchData('萊爾富')">🔄 手動更新萊爾富</button>
     </div>
+
+    <div id="status-msg">🚀 準備就緒，正在自動載入全部資料...</div>
 
     <div id="events-container" class="grid-container"></div>
 
     <script>
-        // 將不同超商名稱映射到對應的 CSS class
+        // 儲存全域資料，避免切換頁籤時一直發送請求
+        let eventsData = [];
+        let currentTab = '全部';
+
+        // 取得超商對應的 CSS Class
         function getStoreClass(storeName) {
             if (storeName === '全家') return 'tag-family';
             if (storeName === '7-11') return 'tag-seven';
             if (storeName === '萊爾富') return 'tag-hilife';
-            return 'tag-default'; // 萬一有預期外的名稱
+            return 'tag-default';
         }
 
-        // 網頁載入後，自動向後端 API 請求資料
-        window.onload = function() {
-            fetch('/api/update')
+        // 切換頁籤與更新按鈕顯示
+        function switchTab(storeName) {
+            currentTab = storeName;
+            
+            // 更新頁籤 UI 狀態
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.innerText.includes(storeName) || (storeName === '全部' && btn.innerText === '顯示全部')) {
+                    btn.classList.add('active');
+                }
+            });
+
+            // 控制更新按鈕的顯示與隱藏
+            document.querySelectorAll('.update-btn').forEach(btn => btn.style.display = 'none');
+            if (storeName === '全部') {
+                document.getElementById('update-all').style.display = 'inline-block';
+            } else {
+                document.getElementById(`update-${storeName}`).style.display = 'inline-block';
+            }
+
+            renderCards();
+        }
+
+        // 負責將資料渲染到畫面上
+        function renderCards() {
+            const container = document.getElementById('events-container');
+            container.innerHTML = '';
+
+            // 根據當前頁籤過濾資料
+            const filteredData = currentTab === '全部' 
+                ? eventsData 
+                : eventsData.filter(event => event.store === currentTab);
+
+            if (filteredData.length === 0) {
+                container.innerHTML = `<p style="text-align:center; width:100%; color:#555;">目前 ${currentTab} 沒有掃描到優惠，或尚未抓取資料。</p>`;
+                return;
+            }
+
+            filteredData.forEach(event => {
+                const tagClass = getStoreClass(event.store);
+                const cardHTML = `
+                    <a href="${event.link}" target="_blank" class="card">
+                        <img src="${event.img_url}" alt="優惠圖片" onerror="this.src='https://via.placeholder.com/300x250?text=No+Image'">
+                        <div class="card-content">
+                            <span class="store-tag ${tagClass}">${event.store}</span>
+                            <div class="card-title">${event.title}</div>
+                        </div>
+                    </a>
+                `;
+                container.insertAdjacentHTML('beforeend', cardHTML);
+            });
+        }
+
+        // 呼叫 API 抓取資料 (支援單一超商或全部)
+        function fetchData(targetStore) {
+            const statusMsg = document.getElementById('status-msg');
+            const btns = document.querySelectorAll('.update-btn');
+            
+            // 鎖定按鈕防止重複點擊
+            btns.forEach(btn => btn.disabled = true);
+            statusMsg.innerText = `⏳ 機器人正在前往 ${targetStore} 網頁奔波中，請稍候...`;
+
+            // 如果後端有支援 ?store 參數，這裡就能發揮作用
+            const apiUrl = targetStore === '全部' 
+                ? '/api/update' 
+                : `/api/update?store=${encodeURIComponent(targetStore)}`;
+
+            fetch(apiUrl)
                 .then(response => response.json())
                 .then(data => {
-                    const container = document.getElementById('events-container');
-                    const loading = document.getElementById('loading');
-                    
-                    // 隱藏載入中提示
-                    loading.style.display = 'none';
-
-                    // 檢查是否有抓到資料
-                    if (data.length === 0) {
-                        container.innerHTML = '<p style="text-align:center; width:100%;">目前沒有掃描到任何優惠 QQ</p>';
-                        return;
+                    // 如果是更新全部，直接覆蓋；如果只更新單一超商，則替換掉原本該超商的資料
+                    if (targetStore === '全部') {
+                        eventsData = data;
+                    } else {
+                        // 移除舊的該超商資料，加入新抓取的資料
+                        eventsData = eventsData.filter(e => e.store !== targetStore);
+                        eventsData = eventsData.concat(data);
                     }
-
-                    // 尋訪每一筆資料，建立卡片
-                    data.forEach(event => {
-                        // 取得對應的超商顏色 class
-                        const tagClass = getStoreClass(event.store);
-
-                        // 使用 Template Literal 組合 HTML
-                        const cardHTML = `
-                            <a href="${event.link}" target="_blank" class="card">
-                                <img src="${event.img_url}" alt="優惠圖片" onerror="this.src='https://via.placeholder.com/300x250?text=No+Image'">
-                                <div class="card-content">
-                                    <span class="store-tag ${tagClass}">${event.store}</span>
-                                    <div class="card-title">${event.title}</div>
-                                </div>
-                            </a>
-                        `;
-                        
-                        // 將組合好的卡片塞進容器中
-                        container.insertAdjacentHTML('beforeend', cardHTML);
-                    });
+                    
+                    statusMsg.innerText = `✅ ${targetStore} 資料更新完成！`;
+                    renderCards();
+                    
+                    // 3秒後清除成功訊息
+                    setTimeout(() => statusMsg.innerText = '', 3000);
                 })
                 .catch(error => {
                     console.error('API 請求失敗:', error);
-                    document.getElementById('loading').innerText = '❌ 抓取資料時發生錯誤，請檢查終端機。';
+                    statusMsg.innerText = '❌ 抓取資料時發生錯誤，請檢查終端機。';
+                })
+                .finally(() => {
+                    btns.forEach(btn => btn.disabled = false);
                 });
+        }
+
+        // 網頁載入後，自動獲取全部資料
+        window.onload = () => {
+            fetchData('全部');
         };
     </script>
 </body>
