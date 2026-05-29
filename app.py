@@ -1,3 +1,104 @@
+import threading
+import time
+from flask import Flask, render_template, jsonify
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
+
+app = Flask(__name__, template_folder='.')
+app.json.ensure_ascii = False  # 👈 加上這一行，關閉 ASCII 強制編碼
+
+# 1. 建立一個全域變數，用來存放爬蟲抓到的最新資料
+data_store = {
+    "status": "initializing",
+    "last_updated": "從未更新",
+    "result": "正在等待第一次爬蟲..."
+}
+
+def create_driver():
+    chrome_options = Options()
+    chrome_options.add_argument("--headless=new")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--remote-debugging-port=9222")
+    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+    chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    chrome_options.add_experimental_option("useAutomationExtension", False)
+    chrome_options.add_argument(
+        "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    )
+    
+    # 如果先前有 binary_location 錯誤，請在這邊解開註解並修正路徑：
+    # chrome_options.binary_location = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+    
+    service = Service(ChromeDriverManager().install())
+    driver = webdriver.Chrome(service=service, options=chrome_options)
+    driver.execute_cdp_cmd(
+        "Page.addScriptToEvaluateOnNewDocument",
+        {"source": "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"}
+    )
+    return driver
+
+# 2. 背景爬蟲核心邏輯
+def background_crawler():
+    global data_store
+    print("🚀 背景爬蟲執行緒已啟動...")
+    
+    driver = create_driver()
+    
+    try:
+        while True: # 這裡讓它變成無限循環，定時更新
+            print("🕷️ 爬蟲開始抓取資料...")
+            
+            # --- 放入你的爬蟲步驟 ---
+            driver.get("https://example.com") # 換成你要爬的目標網站
+            time.sleep(3) # 等待網頁載入
+            
+            # 這就是你原本第 574 行想看的資料
+            page_content = driver.page_source[:5000] 
+            print("📸 成功抓取前 5000 字元！")
+            
+            # 關鍵：把抓到的資料塞進全域變數，蓋掉舊資料
+            data_store["status"] = "success"
+            data_store["last_updated"] = time.strftime("%Y-%m-%d %H:%M:%S")
+            data_store["result"] = page_content 
+            
+            # --- 週期設定 ---
+            print("💤 爬蟲進入睡眠，10分鐘後再次更新...")
+            time.sleep(600) # 每 10 分鐘 (600秒) 自動重爬一次。如果「只要跑一次」，把這行換成 break 即可。
+            
+    except Exception as e:
+        print(f"❌ 爬蟲發生錯誤: {e}")
+        data_store["status"] = "error"
+        data_store["result"] = str(e)
+    finally:
+        driver.quit()
+        print("🔒 瀏覽器已關閉")
+
+# 3. Flask 路由設定
+@app.route('/')
+def home():
+    return render_template('index.html') # 呈現你的首頁
+
+@app.route('/api/update')
+def get_data():
+    # 當前端網頁用 JavaScript (fetch) 呼叫這個網址時
+    # 伺服器會「秒回」目前存在記憶體裡的最新爬蟲資料，完全不用等待瀏覽器開啟！
+    return jsonify(data_store)
+
+if __name__ == '__main__':
+    # 4. 關鍵：在啟動網頁伺服器之前，先派爬蟲去背景工作
+    # daemon=True 代表當 Python 程式關閉時，這個背景爬蟲也會跟著一起結束，不會變成殭屍程序
+    crawler_thread = threading.Thread(target=background_crawler, daemon=True)
+    crawler_thread.start()
+    
+    # 5. 啟動 Flask 網頁伺服器
+    # 注意：use_reloader=False 非常重要！否則 Flask 的 Debug 模式會把你的背景執行緒啟動兩次！
+    app.run(port=8080, debug=True, use_reloader=False)
+    
+####################################################################
 from flask import Flask, render_template, jsonify, request
 from bs4 import BeautifulSoup
 
@@ -15,6 +116,7 @@ import re
 import os
 
 app = Flask(__name__)
+app.json.ensure_ascii = False
 
 # ==========================================
 # 超商網站
@@ -571,4 +673,4 @@ if __name__ == '__main__':
     app.run(host='0.0.0.0', port=port, debug=True)
 
     
-print(driver.page_source[:5000])
+#print(driver.page_source[:5000])
