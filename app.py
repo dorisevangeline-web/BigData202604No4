@@ -2,13 +2,11 @@ from flask import Flask, render_template, jsonify, request
 from bs4 import BeautifulSoup
 
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-from webdriver_manager.chrome import ChromeDriverManager
 
 from urllib.parse import urljoin
 
@@ -277,6 +275,7 @@ def fetch_hilife_events(driver, base_url):
     events = []
     print("\n🌍 前往萊爾富網站...")
     driver.get(base_url)
+    time.sleep(5)
 
     # 等待頁面
     time.sleep(5)
@@ -417,7 +416,7 @@ def fetch_normal_store(driver, store_name, base_url):
     events = []
     print(f"\n🌍 前往 {store_name} 網站...")
     driver.get(base_url)
-    time.sleep(3)
+    time.sleep(5)
 
     # 滾動頁面
     for _ in range(4):
@@ -571,4 +570,5 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
     app.run(host='0.0.0.0', port=port, debug=True)
 
-    print(driver.page_source[:3000])
+    
+print(driver.page_source[:5000])
