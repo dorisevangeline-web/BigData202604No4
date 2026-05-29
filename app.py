@@ -2,13 +2,10 @@ from flask import Flask, render_template, jsonify, request
 from bs4 import BeautifulSoup
 
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-
-from webdriver_manager.chrome import ChromeDriverManager
 
 from urllib.parse import urljoin
 
@@ -101,8 +98,8 @@ def create_driver():
         "Chrome/120.0.0.0 Safari/537.36"
     )
 
-    service = Service(ChromeDriverManager().install())
-    driver = webdriver.Chrome(service=service, options=chrome_options)
+    
+    driver = webdriver.Chrome(options=chrome_options)
 
     # 隱藏 webdriver
     driver.execute_cdp_cmd(
