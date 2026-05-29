@@ -20,4 +20,3 @@ COPY . .
 ENV PORT=10000
 
 CMD ["python", "app.py"]
-```
