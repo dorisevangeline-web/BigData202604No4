@@ -83,13 +83,13 @@ def create_driver():
     chrome_options = Options()
 
     # 背景執行
-    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--headless=new")
 
     # Linux / Render 必備
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("window-size=1920,1080")
+    chrome_options.add_argument("--remote-debugging-port=9222")
 
     # 反爬蟲
     chrome_options.add_argument("--disable-blink-features=AutomationControlled")
@@ -123,9 +123,10 @@ def fetch_family_events(driver, base_url):
     events = []
     print("\n🌍 前往全家網站...")
     driver.get(base_url)
+    time.sleep(5)
 
     try:
-        WebDriverWait(driver, 15).until(
+        WebDriverWait(driver, 25).until(
             EC.presence_of_element_located((By.TAG_NAME, "img"))
         )
     except:
@@ -569,3 +570,5 @@ def update_events():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
     app.run(host='0.0.0.0', port=port, debug=True)
+
+    print(driver.page_source[:3000])
